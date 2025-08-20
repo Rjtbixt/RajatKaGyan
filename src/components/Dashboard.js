@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, Row } from "antd";
 import { Line, Pie } from "@ant-design/charts";
 import moment from "moment";
@@ -13,35 +13,11 @@ import { auth, db } from "../firebase";
 import { addDoc, collection, getDocs, query } from "firebase/firestore";
 import Loader from "./Loader";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
 import { unparse } from "papaparse";
 
 const Dashboard = () => {
   const [user] = useAuthState(auth);
 
-  // const sampleTransactions = [
-  // {
-  //   name: "Pay day",
-  //   type: "income",
-  //   date: "2023-01-15",
-  //   amount: 2000,
-  //   tag: "salary",
-  // },
-  // {
-  //   name: "Dinner",
-  //   type: "expense",
-  //   date: "2023-01-20",
-  //   amount: 500,
-  //   tag: "food",
-  // },
-  // {
-  //   name: "Books",
-  //   type: "expense",
-  //   date: "2023-01-25",
-  //   amount: 300,
-  //   tag: "education",
-  // },
-  // ];
   const [isExpenseModalVisible, setIsExpenseModalVisible] = useState(false);
   const [isIncomeModalVisible, setIsIncomeModalVisible] = useState(false);
   const [transactions, setTransactions] = useState([]);
@@ -50,8 +26,7 @@ const Dashboard = () => {
   const [income, setIncome] = useState(0);
   const [expenses, setExpenses] = useState(0);
 
-  const navigate = useNavigate();
-
+  // Process data for charts
   const processChartData = () => {
     const balanceData = [];
     const spendingData = {};
@@ -92,26 +67,14 @@ const Dashboard = () => {
   };
 
   const { balanceData, spendingDataArray } = processChartData();
-  const showExpenseModal = () => {
-    setIsExpenseModalVisible(true);
-  };
 
-  const showIncomeModal = () => {
-    setIsIncomeModalVisible(true);
-  };
+  // Modal Handlers
+  const showExpenseModal = () => setIsExpenseModalVisible(true);
+  const showIncomeModal = () => setIsIncomeModalVisible(true);
+  const handleExpenseCancel = () => setIsExpenseModalVisible(false);
+  const handleIncomeCancel = () => setIsIncomeModalVisible(false);
 
-  const handleExpenseCancel = () => {
-    setIsExpenseModalVisible(false);
-  };
-
-  const handleIncomeCancel = () => {
-    setIsIncomeModalVisible(false);
-  };
-
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
-
+  // Add new transaction
   const onFinish = (values, type) => {
     const newTransaction = {
       type: type,
@@ -128,7 +91,7 @@ const Dashboard = () => {
     calculateBalance();
   };
 
-  const calculateBalance = () => {
+  const calculateBalance = useCallback(() => {
     let incomeTotal = 0;
     let expensesTotal = 0;
 
@@ -143,12 +106,11 @@ const Dashboard = () => {
     setIncome(incomeTotal);
     setExpenses(expensesTotal);
     setCurrentBalance(incomeTotal - expensesTotal);
-  };
+  }, [transactions]);
 
-  // Calculate the initial balance, income, and expenses
   useEffect(() => {
     calculateBalance();
-  }, [transactions]);
+  }, [transactions, calculateBalance]);
 
   async function addTransaction(transaction, many) {
     try {
@@ -168,21 +130,24 @@ const Dashboard = () => {
     }
   }
 
-  async function fetchTransactions() {
+  const fetchTransactions = useCallback(async () => {
     setLoading(true);
     if (user) {
       const q = query(collection(db, `users/${user.uid}/transactions`));
       const querySnapshot = await getDocs(q);
       let transactionsArray = [];
       querySnapshot.forEach((doc) => {
-        // doc.data() is never undefined for query doc snapshots
         transactionsArray.push(doc.data());
       });
       setTransactions(transactionsArray);
       toast.success("Transactions Fetched!");
     }
     setLoading(false);
-  }
+  }, [user]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
   const balanceConfig = {
     data: balanceData,
@@ -199,6 +164,7 @@ const Dashboard = () => {
   function reset() {
     console.log("resetting");
   }
+
   const cardStyle = {
     boxShadow: "0px 0px 30px 8px rgba(227, 227, 227, 0.75)",
     margin: "2rem",
@@ -260,7 +226,7 @@ const Dashboard = () => {
 
                 <Card bordered={true} style={{ ...cardStyle, flex: 0.45 }}>
                   <h2>Total Spending</h2>
-                  {spendingDataArray.length == 0 ? (
+                  {spendingDataArray.length === 0 ? ( // fixed ===
                     <p>Seems like you haven't spent anything till now...</p>
                   ) : (
                     <Pie {...{ ...spendingConfig, data: spendingDataArray }} />

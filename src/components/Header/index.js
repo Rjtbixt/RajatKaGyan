@@ -1,12 +1,14 @@
 import React, { useEffect } from "react";
 import "./styles.css";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; // ❌ removed unused Link
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../../firebase";
 import userSvg from "../../assets/user.svg";
+
 function Header() {
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
+
   function logout() {
     auth.signOut();
     navigate("/");
@@ -15,9 +17,8 @@ function Header() {
   useEffect(() => {
     if (!user) {
       navigate("/");
-    } else {
-      navigate("/dashboard");
     }
+    // ❌ Removed navigate("/dashboard") to prevent redirect loop
   }, [user, navigate]);
 
   return (
@@ -30,13 +31,12 @@ function Header() {
               src={user.photoURL ? user.photoURL : userSvg}
               width={user.photoURL ? "32" : "24"}
               style={{ borderRadius: "50%" }}
+              alt="User Avatar"   // ✅ added alt
             />
           </span>
           Logout
         </p>
-      ) : (
-        <></>
-      )}
+      ) : null}
     </div>
   );
 }

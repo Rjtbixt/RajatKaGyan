@@ -1,11 +1,9 @@
 import React, { useRef, useState } from "react";
-import { Input, Table, Select, Radio } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { Table, Select, Radio } from "antd";
 import search from "../assets/search.svg";
 import { parse } from "papaparse";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
-const { Search } = Input;
+
 const { Option } = Select;
 
 const TransactionSearch = ({
@@ -26,13 +24,10 @@ const TransactionSearch = ({
       parse(event.target.files[0], {
         header: true,
         complete: async function (results) {
-          // Now results.data is an array of objects representing your CSV rows
           for (const transaction of results.data) {
-            // Write each transaction to Firebase, you can use the addTransaction function here
-            console.log("Transactions", transaction);
             const newTransaction = {
               ...transaction,
-              amount: parseInt(transaction.amount),
+              amount: parseInt(transaction.amount, 10),
             };
             await addTransaction(newTransaction, true);
           }
@@ -40,38 +35,18 @@ const TransactionSearch = ({
       });
       toast.success("All Transactions Added");
       fetchTransactions();
-      event.target.files = null;
+      event.target.value = null; // ✅ reset file input correctly
     } catch (e) {
       toast.error(e.message);
     }
   }
 
   const columns = [
-    {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
-    },
-    {
-      title: "Type",
-      dataIndex: "type",
-      key: "type",
-    },
-    {
-      title: "Date",
-      dataIndex: "date",
-      key: "date",
-    },
-    {
-      title: "Amount",
-      dataIndex: "amount",
-      key: "amount",
-    },
-    {
-      title: "Tag",
-      dataIndex: "tag",
-      key: "tag",
-    },
+    { title: "Name", dataIndex: "name", key: "name" },
+    { title: "Type", dataIndex: "type", key: "type" },
+    { title: "Date", dataIndex: "date", key: "date" },
+    { title: "Amount", dataIndex: "amount", key: "amount" },
+    { title: "Tag", dataIndex: "tag", key: "tag" },
   ];
 
   const filteredTransactions = transactions.filter((transaction) => {
@@ -89,9 +64,8 @@ const TransactionSearch = ({
       return new Date(a.date) - new Date(b.date);
     } else if (sortKey === "amount") {
       return a.amount - b.amount;
-    } else {
-      return 0;
     }
+    return 0;
   });
 
   const dataSource = sortedTransactions.map((transaction, index) => ({
@@ -100,12 +74,7 @@ const TransactionSearch = ({
   }));
 
   return (
-    <div
-      style={{
-        width: "100%",
-        padding: "0rem 2rem",
-      }}
-    >
+    <div style={{ width: "100%", padding: "0rem 2rem" }}>
       <div
         style={{
           display: "flex",
@@ -116,7 +85,7 @@ const TransactionSearch = ({
         }}
       >
         <div className="input-flex">
-          <img src={search} width="16" />
+          <img src={search} alt="Search icon" width="16" /> {/* ✅ alt added */}
           <input
             placeholder="Search by Name"
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -135,16 +104,6 @@ const TransactionSearch = ({
         </Select>
       </div>
 
-      {/* <Select
-        style={{ width: 200, marginRight: 10 }}
-        onChange={(value) => setSelectedTag(value)}
-        placeholder="Filter by tag"
-        allowClear
-      >
-        <Option value="food">Food</Option>
-        <Option value="education">Education</Option>
-        <Option value="office">Office</Option>
-      </Select> */}
       <div className="my-table">
         <div
           style={{
@@ -166,6 +125,7 @@ const TransactionSearch = ({
             <Radio.Button value="date">Sort by Date</Radio.Button>
             <Radio.Button value="amount">Sort by Amount</Radio.Button>
           </Radio.Group>
+
           <div
             style={{
               display: "flex",
@@ -177,7 +137,7 @@ const TransactionSearch = ({
             <button className="btn" onClick={exportToCsv}>
               Export to CSV
             </button>
-            <label for="file-csv" className="btn btn-blue">
+            <label htmlFor="file-csv" className="btn btn-blue"> {/* ✅ fixed */}
               Import from CSV
             </label>
             <input
@@ -187,6 +147,7 @@ const TransactionSearch = ({
               accept=".csv"
               required
               style={{ display: "none" }}
+              ref={fileInput}
             />
           </div>
         </div>
